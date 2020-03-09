@@ -2,7 +2,7 @@
 
 SDL2_rotozoom.c: rotozoomer, zoomer and shrinker for 32bit or 8bit surfaces
 
-Copyright (C) 2012-2014  Andreas Schiffler
+Copyright (C) 2012  Andreas Schiffler
 
 This software is provided 'as-is', without any express or implied
 warranty. In no event will the authors be held liable for any damages
@@ -35,6 +35,33 @@ Andreas Schiffler -- aschiffler at ferzkopp dot net
 #include <string.h>
 
 #include "SDL2_rotozoom.h"
+#include "SDL2_gfxPrimitives.h"
+
+#define SDL_STBIMAGE_IMPLEMENTATION
+#define SDL_STBIMG_DEF __attribute__ ((visibility ("default")))
+#include "SDL_stbimage.h"
+
+SDL_STBIMG_DEF int GFX_bezierColor(SDL_Renderer* renderer, const Sint16* vx, const Sint16* vy,
+							int n, int s, Uint32 color)
+{	return bezierColor(renderer, vx, vy, n, s, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledEllipseColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, Uint32 color)
+{	return aaFilledEllipseColor(renderer, cx, cy, rx, ry, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPolygonColor(SDL_Renderer * renderer, const double * vx, const double * vy, int n, Uint32 color)
+{	return aaFilledPolygonColor(renderer, vx, vy, n, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPieColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, Uint32 chord, Uint32 color)
+{	return aaFilledPieColor(renderer, cx, cy, rx, ry, start, end, chord, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaArcColor(SDL_Renderer * renderer, float cx, float cy, float rx, float ry, float start, float end, float thick, Uint32 color)
+{	return aaArcColor(renderer, cx, cy, rx, ry, start, end, thick, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, float thick, int color)
+{	return aaBezierColor(renderer, x, y, n, s, thick, color) ; }
+
+SDL_STBIMG_DEF int GFX_aaFilledPolyBezierColor(SDL_Renderer * renderer, double *x, double *y, int n, int s, int color)
+{	return aaFilledPolyBezierColor(renderer, x, y, n, s, color) ; }
 
 /* ---- Internally used structures */
 
@@ -284,10 +311,10 @@ int _zoomSurfaceRGBA(SDL_Surface * src, SDL_Surface * dst, int flipx, int flipy,
 	/*
 	* Allocate memory for row/column increments 
 	*/
-	if ((sax = (int *) malloc((dst->w + 1) * sizeof(Uint32))) == NULL) {
+	if ((sax = (int *) malloc((dst->w + 1) * sizeof(int))) == NULL) {
 		return (-1);
 	}
-	if ((say = (int *) malloc((dst->h + 1) * sizeof(Uint32))) == NULL) {
+	if ((say = (int *) malloc((dst->h + 1) * sizeof(int))) == NULL) {
 		free(sax);
 		return (-1);
 	}
@@ -512,7 +539,7 @@ int _zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int flipy)
 	int x, y;
 	Uint32 *sax, *say, *csax, *csay;
 	int csx, csy;
-	Uint8 *sp, *dp, *csp;
+	Uint8 *sp, *dp, *csp ;
 	int dgap;
 
 	/*
@@ -529,10 +556,10 @@ int _zoomSurfaceY(SDL_Surface * src, SDL_Surface * dst, int flipx, int flipy)
 	/*
 	* Pointer setup 
 	*/
-	sp = csp = (Uint8 *) src->pixels;
 	dp = (Uint8 *) dst->pixels;
 	dgap = dst->pitch - dst->w;
 
+	csp = (Uint8 *) src->pixels;
 	if (flipx) csp += (src->w-1);
 	if (flipy) csp  = ( (Uint8*)csp + src->pitch*(src->h-1) );
 
@@ -914,7 +941,7 @@ SDL_Surface* rotateSurface90Degrees(SDL_Surface* src, int numClockwiseTurns)
 		{
 			for (row = 0; row < src->h; ++row) {
 				srcBuf = (Uint8*)(src->pixels) + (row * src->pitch);
-				dstBuf = (Uint8*)(dst->pixels) + (row * bpp) + ((dst->h - 1) * dst->pitch);
+				dstBuf = (Uint8*)(dst->pixels) + (row * bpp) + (dst->h * dst->pitch);
 				for (col = 0; col < src->w; ++col) {
 					memcpy (dstBuf, srcBuf, bpp);
 					srcBuf += bpp;
@@ -966,7 +993,7 @@ void _rotozoomSurfaceSizeTrig(int width, int height, double angle, double zoomx,
 	*sanglezoom = sin(radangle);
 	*canglezoom = cos(radangle);
 	*sanglezoom *= zoomx;
-	*canglezoom *= zoomy;
+	*canglezoom *= zoomx;
 	x = (double)(width / 2);
 	y = (double)(height / 2);
 	cx = *canglezoom * x;

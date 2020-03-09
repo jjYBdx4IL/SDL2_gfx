@@ -1,0 +1,14 @@
+.deps
+.libs
+Makefile
+test/Makefile
+config.log
+config.status
+test/config.log
+test/config.status
+*.o
+*.lo
+*.la
+SDL2_gfx.pc
+autom4te.cache
+libtool
